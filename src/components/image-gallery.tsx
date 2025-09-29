@@ -21,7 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shuffle, Trash2, GripVertical, Download } from "lucide-react";
+import { Trash2, GripVertical, Download, Heart, Maximize2, RotateCcw } from "lucide-react";
 import Image from "next/image";
 import { GeneratedImage } from "./ai-image-generator";
 import { formatDistanceToNow } from "date-fns";
@@ -32,6 +32,9 @@ interface ImageGalleryProps {
   onDeleteImage: (id: string) => void;
   onRemixImage: (prompt: string) => void;
   onDownloadImage: (image: GeneratedImage) => void;
+  onToggleFavorite: (id: string) => void;
+  onOpenFullscreen: (image: GeneratedImage) => void;
+  favoriteImages: string[];
 }
 
 interface SortableImageProps {
@@ -39,9 +42,12 @@ interface SortableImageProps {
   onDelete: (id: string) => void;
   onRemix: (prompt: string) => void;
   onDownload: (image: GeneratedImage) => void;
+  onToggleFavorite: (id: string) => void;
+  onOpenFullscreen: (image: GeneratedImage) => void;
+  isFavorite: boolean;
 }
 
-function SortableImage({ image, onDelete, onRemix, onDownload }: SortableImageProps) {
+function SortableImage({ image, onDelete, onRemix, onDownload, onToggleFavorite, onOpenFullscreen, isFavorite }: SortableImageProps) {
   const {
     attributes,
     listeners,
@@ -75,15 +81,31 @@ function SortableImage({ image, onDelete, onRemix, onDownload }: SortableImagePr
       </div>
 
       {/* Image */}
-      <div className="relative aspect-square">
+      <div className="relative aspect-square cursor-pointer group" onClick={() => onOpenFullscreen(image)}>
         <Image
           src={image.url}
           alt={image.prompt}
           fill
-          className="object-cover"
+          className="object-cover transition-transform group-hover:scale-105"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           unoptimized
         />
+        {/* Overlay on hover */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+          <Maximize2 className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+        {/* Favorite heart */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(image.id);
+          }}
+          className={`absolute top-2 right-2 p-1 rounded-full transition-colors ${
+            isFavorite ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-600 hover:text-red-500'
+          }`}
+        >
+          <Heart className={`h-3 w-3 ${isFavorite ? 'fill-current' : ''}`} />
+        </button>
       </div>
 
       {/* Image Info */}
@@ -100,14 +122,13 @@ function SortableImage({ image, onDelete, onRemix, onDownload }: SortableImagePr
 
         {/* Actions */}
         <div className="flex gap-1 pt-2">
-          <Button
-            size="sm"
+                    <Button
             variant="outline"
-            onClick={() => onRemix(image.prompt)}
-            className="flex-1 text-xs h-8"
+            size="sm"
+            onClick={() => onRemix(image.id)}
+            className="flex-1"
           >
-            <Shuffle className="mr-1 h-3 w-3" />
-            Remix
+            <RotateCcw className="h-3 w-3" />
           </Button>
           <Button
             size="sm"
@@ -136,7 +157,10 @@ export function ImageGallery({
   onUpdateImages, 
   onDeleteImage, 
   onRemixImage,
-  onDownloadImage 
+  onDownloadImage,
+  onToggleFavorite,
+  onOpenFullscreen,
+  favoriteImages
 }: ImageGalleryProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -202,6 +226,9 @@ export function ImageGallery({
               onDelete={onDeleteImage}
               onRemix={onRemixImage}
               onDownload={onDownloadImage}
+              onToggleFavorite={onToggleFavorite}
+              onOpenFullscreen={onOpenFullscreen}
+              isFavorite={favoriteImages.includes(image.id)}
             />
           ))}
         </div>
